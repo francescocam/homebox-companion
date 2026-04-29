@@ -367,13 +367,15 @@ def create_app() -> FastAPI:
         - Includes request-ID in response header for correlation
         """
         # Log with appropriate level and include exception chain
-        log_method = getattr(logger, exc.log_level, logger.error)
-        log_method(
-            "{error_code}: {details}",
-            error_code=exc.error_code,
-            details=str(exc.to_dict()),
-            exc_info=exc if exc.log_level == "error" else None,
-        )
+        if exc.log_level == "error":
+            logger.opt(exception=exc).error(
+                "{code}: {details}",
+                code=exc.error_code,
+                details=exc.to_dict(),
+            )
+        else:
+            log_method = getattr(logger, exc.log_level, logger.error)
+            log_method("{code}: {details}", code=exc.error_code, details=exc.to_dict())
 
         return JSONResponse(
             status_code=exc.status_code,

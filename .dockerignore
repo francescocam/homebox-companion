@@ -30,6 +30,10 @@ frontend/node_modules
 logs/
 *.log
 
+# User data
+data/
+homebox-companion-data/
+
 # Environment files (secrets)
 .env
 .env.*
