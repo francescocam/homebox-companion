@@ -307,46 +307,83 @@
 
 		sampleCtx.drawImage(image, 0, 0, sampleCanvas.width, sampleCanvas.height);
 		const { data } = sampleCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
-		const border = averageBorderColor(data, sampleCanvas.width, sampleCanvas.height);
-		const threshold = 34;
-		let minX = sampleCanvas.width;
-		let minY = sampleCanvas.height;
-		let maxX = -1;
-		let maxY = -1;
+		
+		const energyData = new Float32Array(sampleCanvas.width * sampleCanvas.height);
+		let totalEnergy = 0;
 
-		for (let y = 0; y < sampleCanvas.height; y++) {
-			for (let x = 0; x < sampleCanvas.width; x++) {
-				const index = (y * sampleCanvas.width + x) * 4;
-				const diff =
-					Math.abs(data[index] - border.r) +
-					Math.abs(data[index + 1] - border.g) +
-					Math.abs(data[index + 2] - border.b);
+		for (let y = 1; y < sampleCanvas.height - 1; y++) {
+			for (let x = 1; x < sampleCanvas.width - 1; x++) {
+				const i = (y * sampleCanvas.width + x) * 4;
+				const iRight = (y * sampleCanvas.width + (x + 1)) * 4;
+				const iDown = ((y + 1) * sampleCanvas.width + x) * 4;
 
-				if (diff > threshold) {
-					minX = Math.min(minX, x);
-					minY = Math.min(minY, y);
-					maxX = Math.max(maxX, x);
-					maxY = Math.max(maxY, y);
-				}
+				const gx =
+					Math.abs(data[i] - data[iRight]) +
+					Math.abs(data[i + 1] - data[iRight + 1]) +
+					Math.abs(data[i + 2] - data[iRight + 2]);
+				const gy =
+					Math.abs(data[i] - data[iDown]) +
+					Math.abs(data[i + 1] - data[iDown + 1]) +
+					Math.abs(data[i + 2] - data[iDown + 2]);
+				const energy = gx + gy;
+
+				energyData[y * sampleCanvas.width + x] = energy;
+				totalEnergy += energy;
 			}
 		}
 
-		if (maxX < 0 || maxY < 0) return null;
+		if (totalEnergy === 0) return null;
+
+		const rowSums = new Float32Array(sampleCanvas.height);
+		const colSums = new Float32Array(sampleCanvas.width);
+
+		for (let y = 0; y < sampleCanvas.height; y++) {
+			for (let x = 0; x < sampleCanvas.width; x++) {
+				const e = energyData[y * sampleCanvas.width + x];
+				rowSums[y] += e;
+				colSums[x] += e;
+			}
+		}
+
+		const targetTrim = totalEnergy * 0.075;
+
+		let minX = 0;
+		let currentTrim = 0;
+		while (minX < sampleCanvas.width && currentTrim + colSums[minX] < targetTrim) {
+			currentTrim += colSums[minX];
+			minX++;
+		}
+
+		let maxX = sampleCanvas.width - 1;
+		currentTrim = 0;
+		while (maxX > minX && currentTrim + colSums[maxX] < targetTrim) {
+			currentTrim += colSums[maxX];
+			maxX--;
+		}
+
+		let minY = 0;
+		currentTrim = 0;
+		while (minY < sampleCanvas.height && currentTrim + rowSums[minY] < targetTrim) {
+			currentTrim += rowSums[minY];
+			minY++;
+		}
+
+		let maxY = sampleCanvas.height - 1;
+		currentTrim = 0;
+		while (maxY > minY && currentTrim + rowSums[maxY] < targetTrim) {
+			currentTrim += rowSums[maxY];
+			maxY--;
+		}
 
 		const width = maxX - minX + 1;
 		const height = maxY - minY + 1;
-		const imageArea = sampleCanvas.width * sampleCanvas.height;
-		const boundsArea = width * height;
 
-		if (boundsArea / imageArea > 0.92 || boundsArea / imageArea < 0.08) {
-			return null;
-		}
-
-		const padding = Math.round(Math.max(sampleCanvas.width, sampleCanvas.height) * 0.05);
-		minX = Math.max(0, minX - padding);
-		minY = Math.max(0, minY - padding);
-		maxX = Math.min(sampleCanvas.width - 1, maxX + padding);
-		maxY = Math.min(sampleCanvas.height - 1, maxY + padding);
+		const padX = Math.round(width * 0.1);
+		const padY = Math.round(height * 0.1);
+		minX = Math.max(0, minX - padX);
+		minY = Math.max(0, minY - padY);
+		maxX = Math.min(sampleCanvas.width - 1, maxX + padX);
+		maxY = Math.min(sampleCanvas.height - 1, maxY + padY);
 
 		const scaleX = image.width / sampleCanvas.width;
 		const scaleY = image.height / sampleCanvas.height;
@@ -356,36 +393,6 @@
 			width: (maxX - minX + 1) * scaleX,
 			height: (maxY - minY + 1) * scaleY,
 		};
-	}
-
-	function averageBorderColor(
-		data: Uint8ClampedArray,
-		width: number,
-		height: number
-	): { r: number; g: number; b: number } {
-		let r = 0;
-		let g = 0;
-		let b = 0;
-		let count = 0;
-
-		function addPixel(x: number, y: number) {
-			const index = (y * width + x) * 4;
-			r += data[index];
-			g += data[index + 1];
-			b += data[index + 2];
-			count++;
-		}
-
-		for (let x = 0; x < width; x++) {
-			addPixel(x, 0);
-			addPixel(x, height - 1);
-		}
-		for (let y = 1; y < height - 1; y++) {
-			addPixel(0, y);
-			addPixel(width - 1, y);
-		}
-
-		return { r: r / count, g: g / count, b: b / count };
 	}
 
 	function render() {
