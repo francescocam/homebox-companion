@@ -16,6 +16,7 @@ import type {
 	ConfirmedItem,
 	ScanStatus,
 	ThumbnailTransform,
+	CaptureImageTransform,
 	ItemCore,
 	ItemExtended,
 	ImageAnalysisStatus,
@@ -39,6 +40,8 @@ export interface StoredImage {
 	additionalDataUrls?: string[];
 	additionalFilenames?: string[];
 	additionalMimeTypes?: string[];
+	cropTransform?: CaptureImageTransform;
+	additionalCropTransforms?: (CaptureImageTransform | undefined)[];
 	/** Custom asset ID from pre-printed QR codes */
 	assetId?: string | null;
 }
@@ -204,6 +207,8 @@ export async function serializeImage(img: CapturedImage): Promise<StoredImage> {
 		additionalDataUrls,
 		additionalFilenames,
 		additionalMimeTypes,
+		cropTransform: img.cropTransform,
+		additionalCropTransforms: img.additionalCropTransforms,
 		assetId: img.assetId,
 	};
 }
@@ -285,6 +290,8 @@ export async function deserializeImage(stored: StoredImage): Promise<CapturedIma
 		extraInstructions: stored.extraInstructions,
 		additionalFiles,
 		additionalDataUrls,
+		cropTransform: stored.cropTransform,
+		additionalCropTransforms: stored.additionalCropTransforms,
 		assetId: stored.assetId,
 	};
 }

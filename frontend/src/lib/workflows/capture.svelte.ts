@@ -9,7 +9,7 @@
 
 import { workflowLogger as log } from '$lib/utils/logger';
 import { revokeImageObjectUrls } from '$lib/services/serialize';
-import type { CapturedImage } from '$lib/types';
+import type { CapturedImage, CaptureImageTransform } from '$lib/types';
 
 // =============================================================================
 // CAPTURE SERVICE CLASS
@@ -51,6 +51,19 @@ export class CaptureService {
 		this.images = this.images.map((img, i) => (i === index ? { ...img, ...options } : img));
 	}
 
+	/** Replace a primary image after crop/resize editing */
+	replaceImageFile(
+		index: number,
+		file: File,
+		dataUrl: string,
+		cropTransform: CaptureImageTransform
+	): void {
+		log.debug(`Replacing image ${index}: file="${file.name}", size=${file.size} bytes`);
+		this.images = this.images.map((img, i) =>
+			i === index ? { ...img, file, dataUrl, cropTransform } : img
+		);
+	}
+
 	/** Add additional images to a captured image (multi-angle shots) */
 	addAdditionalImages(imageIndex: number, files: File[], dataUrls: string[]): void {
 		log.debug(`Adding ${files.length} additional image(s) to image ${imageIndex}`);
@@ -82,6 +95,41 @@ export class CaptureService {
 				...img,
 				additionalFiles: img.additionalFiles?.filter((_, j) => j !== additionalIndex),
 				additionalDataUrls: img.additionalDataUrls?.filter((_, j) => j !== additionalIndex),
+				additionalCropTransforms: img.additionalCropTransforms?.filter(
+					(_, j) => j !== additionalIndex
+				),
+			};
+		});
+	}
+
+	/** Replace an additional image after crop/resize editing */
+	replaceAdditionalImageFile(
+		imageIndex: number,
+		additionalIndex: number,
+		file: File,
+		dataUrl: string,
+		cropTransform: CaptureImageTransform
+	): void {
+		log.debug(
+			`Replacing additional image ${additionalIndex} for image ${imageIndex}: file="${file.name}", size=${file.size} bytes`
+		);
+
+		this.images = this.images.map((img, i) => {
+			if (i !== imageIndex) return img;
+
+			const additionalFiles = [...(img.additionalFiles || [])];
+			const additionalDataUrls = [...(img.additionalDataUrls || [])];
+			const additionalCropTransforms = [...(img.additionalCropTransforms || [])];
+
+			additionalFiles[additionalIndex] = file;
+			additionalDataUrls[additionalIndex] = dataUrl;
+			additionalCropTransforms[additionalIndex] = cropTransform;
+
+			return {
+				...img,
+				additionalFiles,
+				additionalDataUrls,
+				additionalCropTransforms,
 			};
 		});
 	}

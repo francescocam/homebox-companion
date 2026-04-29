@@ -27,6 +27,7 @@ import type {
 	ConfirmedItem,
 	Progress,
 	SubmissionResult,
+	CaptureImageTransform,
 } from '$lib/types';
 import {
 	type StoredSession,
@@ -467,6 +468,16 @@ class ScanWorkflow {
 		this.captureService.updateImageOptions(index, options);
 	}
 
+	/** Replace a primary image after crop/resize editing */
+	replaceImageFile(
+		index: number,
+		file: File,
+		dataUrl: string,
+		cropTransform: CaptureImageTransform
+	): void {
+		this.captureService.replaceImageFile(index, file, dataUrl, cropTransform);
+	}
+
 	/** Add additional images to a captured image */
 	addAdditionalImages(imageIndex: number, files: File[], dataUrls: string[]): void {
 		this.captureService.addAdditionalImages(imageIndex, files, dataUrls);
@@ -475,6 +486,23 @@ class ScanWorkflow {
 	/** Remove an additional image */
 	removeAdditionalImage(imageIndex: number, additionalIndex: number): void {
 		this.captureService.removeAdditionalImage(imageIndex, additionalIndex);
+	}
+
+	/** Replace an additional image after crop/resize editing */
+	replaceAdditionalImageFile(
+		imageIndex: number,
+		additionalIndex: number,
+		file: File,
+		dataUrl: string,
+		cropTransform: CaptureImageTransform
+	): void {
+		this.captureService.replaceAdditionalImageFile(
+			imageIndex,
+			additionalIndex,
+			file,
+			dataUrl,
+			cropTransform
+		);
 	}
 
 	/** Clear all captured images */

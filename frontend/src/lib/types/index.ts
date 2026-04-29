@@ -81,6 +81,17 @@ export interface Item extends ItemCore, ItemExtended {
 // =============================================================================
 
 /** Image captured for analysis */
+export interface CaptureImageTransform {
+	scale: number;
+	rotation: number;
+	offsetX: number;
+	offsetY: number;
+	cropAspectRatio: number;
+	cropCenterX: number;
+	cropCenterY: number;
+	edited: boolean;
+}
+
 export interface CapturedImage {
 	file: File;
 	/**
@@ -99,6 +110,10 @@ export interface CapturedImage {
 	additionalFiles?: File[];
 	/** Object URLs for displaying additional image previews in UI */
 	additionalDataUrls?: string[];
+	/** Crop/resize transform applied to the primary image */
+	cropTransform?: CaptureImageTransform;
+	/** Crop/resize transforms applied to additional images, aligned by index */
+	additionalCropTransforms?: (CaptureImageTransform | undefined)[];
 	/** Custom asset ID from pre-printed QR codes */
 	assetId?: string | null;
 }
