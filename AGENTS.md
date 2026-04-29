@@ -12,6 +12,37 @@ Instructions for AI/LLM agents working on this codebase.
 
 ---
 
+## Local Patch Workflow
+
+This repository may carry private patch branches based on official upstream release tags from `Duelion/homebox-companion`.
+
+Before implementing local-only features, verify:
+
+```bash
+git status --short
+git branch --show-current
+git describe --tags --always
+git remote -v
+```
+
+Expected branch shape for patched releases:
+
+```text
+patched/vX.Y.Z-crop-resize
+```
+
+When a new upstream release tag is published:
+
+```bash
+git fetch upstream --tags
+git checkout -b patched/vNEW-crop-resize vNEW
+git cherry-pick <crop-resize-commit-range>
+```
+
+Keep local feature changes in a small, replayable commit set so they can be cherry-picked onto future upstream tags. Do not assume local-only features are intended for an upstream PR unless the user explicitly asks.
+
+---
+
 ## Development Commands
 
 ```bash
@@ -139,4 +170,3 @@ Design tokens are defined in `tailwind.config.js`. **Always use tokens instead o
 - **Frontend**: Use design system tokens (see table above), not raw Tailwind colors
 - **Backend**: Extended fields (manufacturer, model, serial) require PUT after create
 - **AI**: Customizations replace defaults—don't concatenate instructions
-

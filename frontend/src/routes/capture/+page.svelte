@@ -18,8 +18,10 @@
 	import StepIndicator from '$lib/components/StepIndicator.svelte';
 	import AnalysisProgressBar from '$lib/components/AnalysisProgressBar.svelte';
 	import StatusIcon from '$lib/components/StatusIcon.svelte';
+	import CaptureCropEditor from '$lib/components/CaptureCropEditor.svelte';
 	import { AssetIdInput } from '$lib/components/form';
 	import InfoTooltip from '$lib/components/InfoTooltip.svelte';
+	import type { CropEditorResult } from '$lib/utils/capture-image';
 	import {
 		TriangleAlert,
 		RefreshCw,
@@ -31,6 +33,7 @@
 		Camera,
 		Upload,
 		Image,
+		Crop,
 		MapPin,
 		Lightbulb,
 	} from 'lucide-svelte';
@@ -50,6 +53,7 @@
 	let additionalCameraInputs: { [key: number]: HTMLInputElement } = {};
 	let analysisAnimationComplete = $state(false);
 	let isStartingAnalysis = $state(false);
+	let cropTarget = $state<{ imageIndex: number; additionalIndex?: number } | null>(null);
 
 	// Track object URLs for cleanup (prevents memory leaks)
 	// Note: We only revoke URLs when images are explicitly removed, NOT on component
@@ -358,6 +362,74 @@
 		workflow.removeAdditionalImage(imageIndex, additionalIndex);
 	}
 
+	function openPrimaryCropEditor(imageIndex: number) {
+		if (isAnalyzing) return;
+		cropTarget = { imageIndex };
+	}
+
+	function openAdditionalCropEditor(imageIndex: number, additionalIndex: number) {
+		if (isAnalyzing) return;
+		cropTarget = { imageIndex, additionalIndex };
+	}
+
+	function handleCropSave(result: CropEditorResult) {
+		if (!cropTarget) return;
+
+		const image = images[cropTarget.imageIndex];
+		if (!image) return;
+
+		const previewUrl = createTrackedObjectUrl(result.file);
+
+		if (cropTarget.additionalIndex === undefined) {
+			revokeObjectUrl(image.dataUrl);
+			workflow.replaceImageFile(cropTarget.imageIndex, result.file, previewUrl, result.transform);
+		} else {
+			const additionalUrl = image.additionalDataUrls?.[cropTarget.additionalIndex];
+			if (additionalUrl) {
+				revokeObjectUrl(additionalUrl);
+			}
+			workflow.replaceAdditionalImageFile(
+				cropTarget.imageIndex,
+				cropTarget.additionalIndex,
+				result.file,
+				previewUrl,
+				result.transform
+			);
+		}
+
+		cropTarget = null;
+		showToast('Cropped photo saved', 'success');
+	}
+
+	function closeCropEditor() {
+		cropTarget = null;
+	}
+
+	function getCropEditorTarget() {
+		if (!cropTarget) return null;
+
+		const image = images[cropTarget.imageIndex];
+		if (!image) return null;
+
+		if (cropTarget.additionalIndex === undefined) {
+			return {
+				file: image.file,
+				dataUrl: image.dataUrl,
+				title: image.file.name,
+			};
+		}
+
+		const additionalFile = image.additionalFiles?.[cropTarget.additionalIndex];
+		const additionalDataUrl = image.additionalDataUrls?.[cropTarget.additionalIndex];
+		if (!additionalFile || !additionalDataUrl) return null;
+
+		return {
+			file: additionalFile,
+			dataUrl: additionalDataUrl,
+			title: additionalFile.name,
+		};
+	}
+
 	// ==========================================================================
 	// HELPERS
 	// ==========================================================================
@@ -620,6 +692,13 @@
 							>
 								{index + 1}
 							</div>
+							{#if image.cropTransform?.edited}
+								<div
+									class="absolute left-0.5 top-0.5 rounded bg-primary-600/90 px-1.5 py-0.5 text-xxs font-medium text-neutral-100"
+								>
+									Crop
+								</div>
+							{/if}
 						</div>
 
 						<!-- Title, Image count and total size -->
@@ -644,6 +723,15 @@
 								<!-- Show status icon during analysis -->
 								<StatusIcon status={imageStatuses[index]} size="sm" />
 							{:else}
+								<button
+									type="button"
+									class="rounded-lg p-2 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
+									aria-label="Crop image"
+									onclick={() => openPrimaryCropEditor(index)}
+									disabled={isAnalyzing}
+								>
+									<Crop size={20} strokeWidth={1.5} />
+								</button>
 								<button
 									type="button"
 									class="rounded-lg p-2 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
@@ -819,6 +907,15 @@
 												/>
 												<button
 													type="button"
+													class="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-950/75 opacity-0 transition-all hover:bg-primary-700 group-hover:opacity-100"
+													aria-label="Crop additional image"
+													onclick={() => openAdditionalCropEditor(index, additionalIndex)}
+													disabled={isAnalyzing}
+												>
+													<Crop class="text-neutral-100" size={14} strokeWidth={2.5} />
+												</button>
+												<button
+													type="button"
 													class="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 opacity-0 transition-all hover:bg-error-600 group-hover:opacity-100"
 													aria-label="Remove additional image"
 													onclick={() => removeAdditionalImage(index, additionalIndex)}
@@ -826,6 +923,13 @@
 												>
 													<X class="text-white" size={14} strokeWidth={2.5} />
 												</button>
+												{#if image.additionalCropTransforms?.[additionalIndex]?.edited}
+													<div
+														class="absolute bottom-1 right-1 rounded bg-primary-600/90 px-1.5 py-0.5 text-xxs font-medium text-neutral-100"
+													>
+														Crop
+													</div>
+												{/if}
 												<div
 													class="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-xxs font-medium text-white"
 												>
@@ -911,6 +1015,19 @@
 		class="hidden"
 	/>
 </div>
+
+{#if cropTarget}
+	{@const editorTarget = getCropEditorTarget()}
+	{#if editorTarget}
+		<CaptureCropEditor
+			file={editorTarget.file}
+			dataUrl={editorTarget.dataUrl}
+			title={editorTarget.title}
+			onSave={handleCropSave}
+			onClose={closeCropEditor}
+		/>
+	{/if}
+{/if}
 
 <!-- Sticky Analyze button at bottom - above navigation bar -->
 <div
