@@ -95,6 +95,9 @@ class ScanWorkflow {
 	/** Debounce timer for auto-persist */
 	private _persistTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	/** Serializes persistence writes so an older, slower save cannot overwrite newer state */
+	private _persistQueue: Promise<void> = Promise.resolve();
+
 	/** Flag to skip the initial effect run (avoids persist on construction) */
 	private _isFirstEffectRun = true;
 
@@ -184,8 +187,14 @@ class ScanWorkflow {
 		}
 		this._persistTimeout = setTimeout(() => {
 			this._persistTimeout = null;
-			this._doPersist();
+			void this.enqueuePersist();
 		}, AUTO_PERSIST_DEBOUNCE_MS);
+	}
+
+	/** Queue a persistence write after any in-flight write completes. */
+	private enqueuePersist(): Promise<void> {
+		this._persistQueue = this._persistQueue.then(() => this._doPersist());
+		return this._persistQueue;
 	}
 
 	/**
@@ -201,7 +210,7 @@ class ScanWorkflow {
 			clearTimeout(this._persistTimeout);
 			this._persistTimeout = null;
 			// Fire-and-forget: browser may not wait for this to complete
-			this._doPersist();
+			void this.enqueuePersist();
 		}
 	}
 
@@ -979,7 +988,14 @@ class ScanWorkflow {
 			return;
 		}
 
-		await this._doPersist();
+		// Cancel a redundant debounced save and queue this critical write behind any
+		// in-flight save. Because _doPersist reads state when it starts, this queued
+		// write captures the latest state and is guaranteed to finish last.
+		if (this._persistTimeout) {
+			clearTimeout(this._persistTimeout);
+			this._persistTimeout = null;
+		}
+		await this.enqueuePersist();
 	}
 
 	/**

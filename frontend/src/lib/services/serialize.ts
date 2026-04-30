@@ -178,6 +178,13 @@ export function revokeImageObjectUrls(image: CapturedImage): void {
 // SERIALIZATION (Runtime → Stored)
 // =============================================================================
 
+/** Copy a reactive transform proxy into a plain object that IndexedDB can clone. */
+function serializeCaptureTransform(
+	transform: CaptureImageTransform | undefined
+): CaptureImageTransform | undefined {
+	return transform ? { ...transform } : undefined;
+}
+
 /**
  * Serialize a CapturedImage to StoredImage.
  * Converts File objects and Object URLs to base64 data URLs.
@@ -207,8 +214,8 @@ export async function serializeImage(img: CapturedImage): Promise<StoredImage> {
 		additionalDataUrls,
 		additionalFilenames,
 		additionalMimeTypes,
-		cropTransform: img.cropTransform,
-		additionalCropTransforms: img.additionalCropTransforms,
+		cropTransform: serializeCaptureTransform(img.cropTransform),
+		additionalCropTransforms: img.additionalCropTransforms?.map(serializeCaptureTransform),
 		assetId: img.assetId,
 	};
 }

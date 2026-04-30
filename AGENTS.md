@@ -77,15 +77,16 @@ npm run format           # Prettier auto-format
 
 Build the frontend and run the server locally:
 
-```powershell
+```bash
 # 1. Build frontend (from frontend/ directory)
 cd frontend
 npm install
 npm run build
 
 # 2. Copy build to server static files
-Remove-Item -Recurse -Force ../server/static/*
-Copy-Item -Recurse -Force build/* ../server/static/
+rm -rf ../server/static
+mkdir -p ../server/static
+cp -r build/* ../server/static/
 
 # 3. Run the server (from project root)
 cd ..

@@ -372,7 +372,7 @@
 		cropTarget = { imageIndex, additionalIndex };
 	}
 
-	function handleCropSave(result: CropEditorResult) {
+	async function handleCropSave(result: CropEditorResult) {
 		if (!cropTarget) return;
 
 		const image = images[cropTarget.imageIndex];
@@ -396,6 +396,11 @@
 				result.transform
 			);
 		}
+
+		// Cropped files can be several megabytes, so the normal debounced persist may still
+		// be serializing when the page unloads. Wait for this critical save to complete so
+		// session recovery restores the edited primary and additional images.
+		await workflow.persistAsync();
 
 		cropTarget = null;
 		showToast('Cropped photo saved', 'success');
