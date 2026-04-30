@@ -216,8 +216,6 @@
 						Ask me about your inventory, locations, or items.
 					</p>
 
-
-
 					<div class="flex w-full max-w-sm flex-col gap-2 px-4">
 						<button
 							class="flex cursor-pointer items-center gap-2.5 rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-3 text-left text-body-sm text-neutral-200 transition-all duration-fast hover:-translate-y-px hover:border-primary-500 hover:bg-neutral-800 active:scale-[0.98]"
