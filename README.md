@@ -109,6 +109,73 @@ Open `http://localhost:8000` in your browser.
 
 > **ARM64/Raspberry Pi:** Docker images are built for both `linux/amd64` and `linux/arm64` architectures.
 
+### Test and Publish the Patched Image with Colima
+
+Maintainers of this patched fork can build an AMD64 image on an Apple silicon Mac, test that exact image
+from a phone, and publish it to `ghcr.io/francescocam/homebox-companion`.
+
+Prepare an ignored, owner-readable environment file:
+
+```bash
+cp .env.example .env
+chmod 600 .env
+```
+
+Edit `.env` with the application settings. If Homebox runs directly on the Mac, set:
+
+```text
+HBC_HOMEBOX_URL=http://host.docker.internal:7745
+```
+
+Then run:
+
+```bash
+make docker-test
+```
+
+The command starts the default Colima profile if necessary, builds and runs `linux/amd64` through Colima's
+foreign-architecture emulation, waits for the health endpoint, and prints both the local URL and the Mac LAN
+URL. Open the LAN URL from a phone on the same network. Allow incoming connections in the macOS firewall if
+prompted, and disconnect or adjust a VPN if it blocks local-network access.
+
+Useful commands:
+
+```bash
+make docker-logs       # Follow the local test container logs
+make docker-clean      # Remove local test artifacts
+make docker-verify     # Verify the public GHCR latest image
+```
+
+When testing is satisfactory, commit the intended source changes, rerun `make docker-test` from the clean
+commit, and publish the exact tested image:
+
+```bash
+make docker-publish
+```
+
+Publishing refuses a dirty or mismatched worktree. It pushes `sha-<commit>` first and then `latest`, verifies
+anonymous AMD64 access, removes the test container and local image tags, and preserves
+`homebox-companion-data/`. Colima is stopped during cleanup only when this workflow originally started it.
+
+The Docker client uses its existing GHCR authentication. If it expires, create a GitHub token with
+`write:packages`, keep it in your secure credential store, and enter it only at the password prompt:
+
+```bash
+docker login ghcr.io --username francescocam
+```
+
+Do not put the GHCR token in `.env` or any repository file.
+
+You can override the host port, Colima profile, or environment file:
+
+```bash
+make docker-test PORT=8080
+make docker-test COLIMA_PROFILE=another-profile
+make docker-test ENV_FILE=.env.local
+```
+
+Photo capture uses the mobile file-capture fallback over HTTP. Native live-camera QR scanning requires HTTPS.
+
 ## ✨ Features
 
 ### AI-Powered Detection

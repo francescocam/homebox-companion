@@ -97,6 +97,27 @@ The app will be available at `http://localhost:8000`.
 
 ---
 
+## Colima Container Workflow
+
+Use the repository commands for local AMD64 container testing and publishing from Apple silicon:
+
+```bash
+make docker-test       # Build, run, health-check, and print the phone URL
+make docker-logs       # Follow local test logs
+make docker-clean      # Remove test artifacts and conditionally stop Colima
+make docker-verify     # Verify public GHCR AMD64 availability
+make docker-publish    # Push the exact clean, tested image
+```
+
+`make docker-test` starts the selected Colima profile when necessary. Cleanup stops Colima only if this
+workflow started it. Set `COLIMA_PROFILE`, `PORT`, or `ENV_FILE` as Make overrides when needed.
+
+Publishing targets `ghcr.io/francescocam/homebox-companion`, requires a clean worktree matching the tested
+image labels, and pushes `sha-<commit>` before `latest`. Run it only when the user explicitly authorizes the
+external publish. Never read or print `.env`, Docker authentication data, or registry tokens.
+
+---
+
 ## Environment Variables
 
 ```bash

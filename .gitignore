@@ -16,6 +16,9 @@ logs/
 data/
 homebox-companion-data/
 
+# Local Colima container workflow state (contains no credentials)
+.container-workflow/
+
 # IDE
 .idea/
 .vscode/
