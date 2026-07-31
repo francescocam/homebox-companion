@@ -192,3 +192,7 @@ Design tokens are defined in `tailwind.config.js`. **Always use tokens instead o
 - **Frontend**: Use design system tokens (see table above), not raw Tailwind colors
 - **Backend**: Extended fields (manufacturer, model, serial) require PUT after create
 - **AI**: Customizations replace defaults—don't concatenate instructions
+
+---
+
+- Python macOS conformance exception: approved — fork; preserve upstream Python tooling
